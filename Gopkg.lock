@@ -1,0 +1,25 @@
+memo = ""
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dgryski/go-farm"
+  packages = ["."]
+  revision = "e2d0fe22b456fa0a35cd883ba355ecfcf1881490"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dgryski/go-jump"
+  packages = ["."]
+  revision = "e1f439676b570800a863c37b78d1f868f51a85fc"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dgryski/go-shardedkv"
+  packages = ["choosers/jump"]
+  revision = "996930947a3f743890dbee0111cc94fda1da4b9d"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "ff09b135c25aae272398c51a07235b90a75aa4f0"
