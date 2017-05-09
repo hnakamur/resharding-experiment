@@ -132,13 +132,18 @@ func main() {
 	}
 
 	copyList := make(map[copyListKey][]string)
+	delList := make(map[string][]string)
 	for _, h := range hostnames {
 		oldShards := oldMapping[h]
 		newShards := newMapping[h]
-		delta := stringSetMinus(newShards, oldShards)
+		inc := stringSetMinus(newShards, oldShards)
+		del := stringSetMinus(oldShards, newShards)
+		if op == "del" {
+			del = stringSetMinus(del, []string{opShard})
+		}
 
 		var keys []string
-		for i, d := range delta {
+		for i, d := range inc {
 			var srcCandidates []string
 			if op == "add" {
 				srcCandidates = oldShards
@@ -155,12 +160,20 @@ func main() {
 
 			keys = append(keys, key.String())
 		}
-		fmt.Printf("%s\told=%s\tnew=%s\tinc=%s\tkeys=%s\n",
+		for _, b := range del {
+			if hosts, ok := delList[b]; ok {
+				delList[b] = append(hosts, h)
+			} else {
+				delList[b] = []string{h}
+			}
+		}
+		fmt.Printf("%s\told=%s\tnew=%s\tinc_shards=%s\tcopykeys=%s\tdel_shards=%s\n",
 			h,
 			strings.Join(oldShards, ","),
 			strings.Join(newShards, ","),
-			strings.Join(delta, ","),
+			strings.Join(inc, ","),
 			strings.Join(keys, ","),
+			strings.Join(del, ","),
 		)
 	}
 
@@ -172,6 +185,19 @@ func main() {
 				for _, h := range hosts {
 					fmt.Printf("\t%s\n", h)
 				}
+			}
+		}
+	}
+
+	delKeys := oldBuckets
+	if op == "del" {
+		delKeys = stringSetMinus(delKeys, []string{opShard})
+	}
+	for _, key := range delKeys {
+		if hosts, ok := delList[key]; ok {
+			fmt.Printf("delete sublist %s\n", key)
+			for _, h := range hosts {
+				fmt.Printf("\t%s\n", h)
 			}
 		}
 	}
