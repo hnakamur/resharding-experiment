@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/dgryski/go-farm"
 	"github.com/dgryski/go-shardedkv/choosers/jump"
@@ -13,7 +14,7 @@ import (
 func buildBuckets(shardCount int) []string {
 	var buckets []string
 	for i := 0; i < shardCount; i++ {
-		buckets = append(buckets, fmt.Sprintf("sv%d", i+1))
+		buckets = append(buckets, fmt.Sprintf("met%d", i+1))
 	}
 	return buckets
 }
@@ -32,6 +33,8 @@ func main() {
 	flag.IntVar(&shardCount, "shard-count", 3, "shard count")
 	var siteCount int
 	flag.IntVar(&siteCount, "site-count", 10, "site count")
+	var replicas int
+	flag.IntVar(&replicas, "replicas", 2, "replica count")
 	flag.Parse()
 
 	buckets := buildBuckets(shardCount)
@@ -48,11 +51,12 @@ func main() {
 
 	for i := 0; i < siteCount; i++ {
 		hostname := fmt.Sprintf("%d.example.jp", i)
-		shard := jmp.Choose(hostname)
-		countPerShard[shard]++
-		log.Printf("hostname=%s, shard=%s", hostname, shard)
+		shards := jmp.ChooseReplicas(hostname, 2)
+		for _, s := range shards {
+			countPerShard[s]++
+		}
+		log.Printf("hostname=%s, shards=%s", hostname, strings.Join(shards, ","))
 	}
-	log.Println()
 	for _, b := range buckets {
 		log.Printf("shard=%s, count=%d", b, countPerShard[b])
 	}
