@@ -37,16 +37,20 @@ func buildJump(buckets []string) (*jump.Jump, error) {
 }
 
 func deleteBucket(buckets []string, bucket string) []string {
+	newBuckets := make([]string, 0, len(buckets)-1)
 	for i, b := range buckets {
 		if b == bucket {
-			return append(buckets[:i], buckets[i+1:]...)
+			newBuckets = append(newBuckets, buckets[:i]...)
+			return append(newBuckets, buckets[i+1:]...)
 		}
 	}
 	return buckets
 }
 
 func addBucket(buckets []string, bucket string) []string {
-	return append(buckets, bucket)
+	newBuckets := make([]string, 0, len(buckets)+1)
+	newBuckets = append(newBuckets, buckets...)
+	return append(newBuckets, bucket)
 }
 
 func containsStrInArray(a []string, s string) bool {
@@ -71,6 +75,10 @@ func stringSetMinus(a, b []string) []string {
 type copyListKey struct {
 	src  string
 	dest string
+}
+
+func (k copyListKey) String() string {
+	return fmt.Sprintf("%s->%s", k.src, k.dest)
 }
 
 func main() {
@@ -105,10 +113,13 @@ func main() {
 		newBuckets = addBucket(oldBuckets, opShard)
 	case "del":
 		newBuckets = deleteBucket(oldBuckets, opShard)
-		fmt.Printf("new buckets=%s\n", strings.Join(newBuckets, ","))
 	default:
 		log.Fatal("op must be add or del")
 	}
+	fmt.Printf("oldBuckets:%s\tnewBuckets:%s\n",
+		strings.Join(oldBuckets, ","),
+		strings.Join(newBuckets, ","),
+	)
 
 	newJump, err := buildJump(newBuckets)
 	if err != nil {
@@ -125,13 +136,8 @@ func main() {
 		oldShards := oldMapping[h]
 		newShards := newMapping[h]
 		delta := stringSetMinus(newShards, oldShards)
-		fmt.Printf("%s\told=%s\tnew=%s\tinc=%s\n",
-			h,
-			strings.Join(oldShards, ","),
-			strings.Join(newShards, ","),
-			strings.Join(delta, ","),
-		)
 
+		var keys []string
 		for i, d := range delta {
 			var srcCandidates []string
 			if op == "add" {
@@ -146,14 +152,23 @@ func main() {
 			} else {
 				copyList[key] = []string{h}
 			}
+
+			keys = append(keys, key.String())
 		}
+		fmt.Printf("%s\told=%s\tnew=%s\tinc=%s\tkeys=%s\n",
+			h,
+			strings.Join(oldShards, ","),
+			strings.Join(newShards, ","),
+			strings.Join(delta, ","),
+			strings.Join(keys, ","),
+		)
 	}
 
 	for _, o := range oldBuckets {
 		for _, n := range newBuckets {
 			key := copyListKey{src: o, dest: n}
 			if hosts, ok := copyList[key]; ok {
-				fmt.Printf("copy from %s to %s\n", key.src, key.dest)
+				fmt.Printf("copy sublist %s\n", key.String())
 				for _, h := range hosts {
 					fmt.Printf("\t%s\n", h)
 				}
